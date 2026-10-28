@@ -4,6 +4,6 @@ import { getBookByGoogleId, searchBooks } from "../controllers/books.controller.
 const router = Router();
 
 router.get("/search", searchBooks);
-router.get("/:googleBooksId", getBookByGoogleId);
+router.get("/:openLibraryId", getBookByGoogleId);
 
 export default router;

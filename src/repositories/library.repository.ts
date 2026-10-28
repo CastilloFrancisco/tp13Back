@@ -7,7 +7,8 @@ export type UserLibraryEntry = {
   fecha_agregado: string;
   estado_lectura: string;
   titulo: string;
-  google_books_id: string;
+  open_library_id: string;
+  google_books_id?: string;
   autores: string[];
   portada: string | null;
   descripcion: string | null;
@@ -41,6 +42,7 @@ export class LibraryRepository {
         bu.fecha_agregado,
         bu.estado_lectura,
         l.titulo,
+        l.open_library_id,
         l.google_books_id,
         l.autores,
         l.portada,
@@ -64,6 +66,7 @@ export class LibraryRepository {
         bu.fecha_agregado,
         bu.estado_lectura,
         l.titulo,
+        l.open_library_id,
         l.google_books_id,
         l.autores,
         l.portada,
@@ -95,6 +98,7 @@ export class LibraryRepository {
         bu.fecha_agregado,
         bu.estado_lectura,
         l.titulo,
+        l.open_library_id,
         l.google_books_id,
         l.autores,
         l.portada,

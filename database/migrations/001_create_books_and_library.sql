@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS libros (
     id SERIAL PRIMARY KEY,
-    google_books_id VARCHAR(255) NOT NULL UNIQUE,
+    open_library_id VARCHAR(255) NOT NULL UNIQUE,
     titulo TEXT NOT NULL,
     autores TEXT[] NOT NULL DEFAULT '{}',
     descripcion TEXT,
@@ -34,6 +34,6 @@ CREATE TABLE IF NOT EXISTS biblioteca_usuarios (
     CONSTRAINT uq_biblioteca_usuario_libro UNIQUE (usuario_id, libro_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_libros_google_books_id ON libros (google_books_id);
+CREATE INDEX IF NOT EXISTS idx_libros_open_library_id ON libros (open_library_id);
 CREATE INDEX IF NOT EXISTS idx_biblioteca_usuario ON biblioteca_usuarios (usuario_id);
 CREATE INDEX IF NOT EXISTS idx_biblioteca_libro ON biblioteca_usuarios (libro_id);

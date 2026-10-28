@@ -1,11 +1,12 @@
 import { AppError } from "../errors/app-error.js";
 import { BookRepository, type BookRecord } from "../repositories/book.repository.js";
 import { LibraryRepository, type UserLibraryEntry } from "../repositories/library.repository.js";
-import { GoogleBooksService, type GoogleBookNormalized } from "./google-books.service.js";
+import { OpenLibraryService, type OpenLibraryBookNormalized } from "./open-library.service.js";
 
 export type BookLibraryPayload = {
   id: number;
-  googleBooksId: string;
+  openLibraryId: string;
+  googleBooksId?: string;
   title: string;
   authors: string[];
   description: string | null;
@@ -26,20 +27,20 @@ export class LibraryService {
   constructor(
     private readonly bookRepository = new BookRepository(),
     private readonly libraryRepository = new LibraryRepository(),
-    private readonly googleBooksService = new GoogleBooksService(process.env.GOOGLE_BOOKS_API_KEY ?? "")
+    private readonly openLibraryService = new OpenLibraryService(process.env.OPEN_LIBRARY_API_KEY ?? process.env.GOOGLE_BOOKS_API_KEY ?? "")
   ) {}
 
-  async addBookToLibrary(userId: number, googleBooksId: string, readingStatus = "por_leer"): Promise<BookLibraryPayload> {
+  async addBookToLibrary(userId: number, openLibraryId: string, readingStatus = "por_leer"): Promise<BookLibraryPayload> {
     if (!Number.isInteger(userId) || userId <= 0) {
       throw new AppError(400, "INVALID_USER", "El usuario autenticado es inválido.");
     }
 
-    const normalizedGoogleId = (googleBooksId ?? "").trim();
-    if (!normalizedGoogleId) {
-      throw new AppError(400, "INVALID_GOOGLE_BOOK_ID", "El identificador externo es requerido.");
+    const normalizedOpenLibraryId = (openLibraryId ?? "").trim();
+    if (!normalizedOpenLibraryId) {
+      throw new AppError(400, "INVALID_OPEN_LIBRARY_ID", "El identificador externo es requerido.");
     }
 
-    const externalBook = await this.googleBooksService.getBookByGoogleId(normalizedGoogleId);
+    const externalBook = await this.openLibraryService.getBookByOpenLibraryId(normalizedOpenLibraryId);
     const book = await this.ensureBookExists(externalBook);
 
     const existingRelation = await this.libraryRepository.getByUserAndBookId(userId, book.id);
@@ -66,7 +67,8 @@ export class LibraryService {
 
     return entries.map((entry) => ({
       id: entry.libro_id,
-      googleBooksId: entry.google_books_id,
+      openLibraryId: entry.open_library_id ?? entry.google_books_id ?? "",
+      googleBooksId: entry.google_books_id ?? entry.open_library_id ?? undefined,
       title: entry.titulo,
       authors: entry.autores ?? [],
       description: entry.descripcion ?? null,
@@ -100,7 +102,8 @@ export class LibraryService {
 
     return {
       id: entry.libro_id,
-      googleBooksId: entry.google_books_id,
+      openLibraryId: entry.open_library_id ?? entry.google_books_id ?? "",
+      googleBooksId: entry.google_books_id ?? entry.open_library_id ?? undefined,
       title: entry.titulo,
       authors: entry.autores ?? [],
       description: entry.descripcion ?? null,
@@ -131,10 +134,11 @@ export class LibraryService {
     return removed > 0;
   }
 
-  private async ensureBookExists(externalBook: GoogleBookNormalized): Promise<BookRecord> {
-    const existing = await this.bookRepository.getByGoogleBooksId(externalBook.googleBooksId);
+  private async ensureBookExists(externalBook: OpenLibraryBookNormalized): Promise<BookRecord> {
+    const candidateId = externalBook.openLibraryId ?? externalBook.googleBooksId ?? "";
+    const existing = await this.bookRepository.getByOpenLibraryId(candidateId);
     if (existing) {
-      const merged = await this.bookRepository.upsertByGoogleBooksId(this.toBookCreateInput(externalBook));
+      const merged = await this.bookRepository.upsertByOpenLibraryId(this.toBookCreateInput(externalBook));
       return merged ?? existing;
     }
 
@@ -146,9 +150,10 @@ export class LibraryService {
     return created;
   }
 
-  private toBookCreateInput(book: GoogleBookNormalized) {
+  private toBookCreateInput(book: OpenLibraryBookNormalized) {
     return {
-      googleBooksId: book.googleBooksId,
+      openLibraryId: book.openLibraryId ?? book.googleBooksId,
+      googleBooksId: book.googleBooksId ?? book.openLibraryId,
       title: book.title,
       authors: book.authors,
       description: book.description,
@@ -167,7 +172,8 @@ export class LibraryService {
   private toLibraryPayload(book: BookRecord, relation: UserLibraryEntry): BookLibraryPayload {
     return {
       id: book.id,
-      googleBooksId: book.google_books_id,
+      openLibraryId: book.open_library_id ?? book.google_books_id ?? "",
+      googleBooksId: book.google_books_id ?? book.open_library_id ?? undefined,
       title: book.titulo,
       authors: book.autores ?? [],
       description: book.descripcion ?? null,

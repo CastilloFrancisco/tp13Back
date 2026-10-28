@@ -7,18 +7,18 @@ const libraryService = new LibraryService();
 
 export async function addBookToLibrary(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
   try {
-    const googleBooksId = String(req.body?.googleBooksId ?? "").trim();
+    const openLibraryId = String(req.body?.openLibraryId ?? req.body?.googleBooksId ?? "").trim();
     const readingStatus = String(req.body?.readingStatus ?? "por_leer").trim() || "por_leer";
 
     if (!req.user) {
       throw new AppError(401, "UNAUTHORIZED", "Se requiere autenticación para acceder a la biblioteca.");
     }
 
-    if (!googleBooksId) {
-      throw new AppError(400, "INVALID_GOOGLE_BOOK_ID", "El identificador externo del libro es obligatorio.");
+    if (!openLibraryId) {
+      throw new AppError(400, "INVALID_OPEN_LIBRARY_ID", "El identificador externo del libro es obligatorio.");
     }
 
-    const entry = await libraryService.addBookToLibrary(req.user.id, googleBooksId, readingStatus);
+    const entry = await libraryService.addBookToLibrary(req.user.id, openLibraryId, readingStatus);
     res.status(201).json({ success: true, data: entry });
   } catch (error) {
     next(error);

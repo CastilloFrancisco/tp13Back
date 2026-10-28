@@ -2,7 +2,8 @@ import { DbPg } from "../config/db.js";
 
 export type BookRecord = {
   id: number;
-  google_books_id: string;
+  open_library_id: string;
+  google_books_id?: string;
   titulo: string;
   autores: string[];
   descripcion: string | null;
@@ -20,7 +21,8 @@ export type BookRecord = {
 };
 
 export type BookCreateInput = {
-  googleBooksId: string;
+  openLibraryId?: string;
+  googleBooksId?: string;
   title: string;
   authors: string[];
   description?: string | null;
@@ -53,19 +55,24 @@ export class BookRepository {
   }
 
   async getByGoogleBooksId(googleBooksId: string): Promise<BookRecord | null> {
+    return this.getByOpenLibraryId(googleBooksId);
+  }
+
+  async getByOpenLibraryId(openLibraryId: string): Promise<BookRecord | null> {
     const sql = `
       SELECT *
       FROM libros
-      WHERE google_books_id = $1
+      WHERE open_library_id = $1
     `;
 
-    return await this.db.queryOne<BookRecord>(sql, [googleBooksId]);
+    return await this.db.queryOne<BookRecord>(sql, [openLibraryId]);
   }
 
   async create(input: BookCreateInput): Promise<BookRecord | null> {
+    const openLibraryId = input.openLibraryId ?? input.googleBooksId ?? "";
     const sql = `
       INSERT INTO libros (
-        google_books_id,
+        open_library_id,
         titulo,
         autores,
         descripcion,
@@ -86,7 +93,7 @@ export class BookRepository {
     `;
 
     return await this.db.queryOne<BookRecord>(sql, [
-      input.googleBooksId,
+      openLibraryId,
       input.title,
       input.authors,
       input.description ?? null,
@@ -103,10 +110,11 @@ export class BookRepository {
   }
 
   async update(id: number, input: BookCreateInput): Promise<BookRecord | null> {
+    const openLibraryId = input.openLibraryId ?? input.googleBooksId ?? "";
     const sql = `
       UPDATE libros
       SET
-        google_books_id = $2,
+        open_library_id = $2,
         titulo = $3,
         autores = $4,
         descripcion = $5,
@@ -126,7 +134,7 @@ export class BookRepository {
 
     return await this.db.queryOne<BookRecord>(sql, [
       id,
-      input.googleBooksId,
+      openLibraryId,
       input.title,
       input.authors,
       input.description ?? null,
@@ -143,9 +151,14 @@ export class BookRepository {
   }
 
   async upsertByGoogleBooksId(input: BookCreateInput): Promise<BookRecord | null> {
+    return this.upsertByOpenLibraryId(input);
+  }
+
+  async upsertByOpenLibraryId(input: BookCreateInput): Promise<BookRecord | null> {
+    const openLibraryId = input.openLibraryId ?? input.googleBooksId ?? "";
     const sql = `
       INSERT INTO libros (
-        google_books_id,
+        open_library_id,
         titulo,
         autores,
         descripcion,
@@ -162,7 +175,7 @@ export class BookRepository {
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW()
       )
-      ON CONFLICT (google_books_id) DO UPDATE
+      ON CONFLICT (open_library_id) DO UPDATE
       SET
         titulo = EXCLUDED.titulo,
         autores = EXCLUDED.autores,
@@ -181,7 +194,7 @@ export class BookRepository {
     `;
 
     return await this.db.queryOne<BookRecord>(sql, [
-      input.googleBooksId,
+      openLibraryId,
       input.title,
       input.authors,
       input.description ?? null,

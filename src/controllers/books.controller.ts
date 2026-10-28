@@ -1,8 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 import { AppError } from "../errors/app-error.js";
-import { GoogleBooksService } from "../services/google-books.service.js";
+import { OpenLibraryService } from "../services/open-library.service.js";
 
-const googleBooksService = new GoogleBooksService(process.env.GOOGLE_BOOKS_API_KEY ?? "");
+const openLibraryService = new OpenLibraryService(process.env.OPEN_LIBRARY_API_KEY ?? process.env.GOOGLE_BOOKS_API_KEY ?? "");
 
 export async function searchBooks(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -13,7 +13,7 @@ export async function searchBooks(req: Request, res: Response, next: NextFunctio
     const startIndex = typeof req.query.startIndex === "string" ? Number(req.query.startIndex) : 0;
     const maxResults = typeof req.query.maxResults === "string" ? Number(req.query.maxResults) : 10;
 
-    const searchParams: import("../services/google-books.service.js").GoogleBooksSearchQuery = {
+    const searchParams: import("../services/open-library.service.js").OpenLibrarySearchQuery = {
       ...(query ? { q: query } : {}),
       ...(title ? { title } : {}),
       ...(author ? { author } : {}),
@@ -22,7 +22,7 @@ export async function searchBooks(req: Request, res: Response, next: NextFunctio
       maxResults: Number.isFinite(maxResults) ? maxResults : 10,
     };
 
-    const result = await googleBooksService.searchBooks(searchParams);
+    const result = await openLibraryService.searchBooks(searchParams);
 
     res.status(200).json({
       success: true,
@@ -35,13 +35,18 @@ export async function searchBooks(req: Request, res: Response, next: NextFunctio
 
 export async function getBookByGoogleId(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const googleBooksIdValue = Array.isArray(req.params.googleBooksId) ? req.params.googleBooksId[0] : req.params.googleBooksId;
-    const googleBooksId = typeof googleBooksIdValue === "string" ? googleBooksIdValue.trim() : "";
-    if (!googleBooksId) {
-      throw new AppError(400, "INVALID_GOOGLE_BOOK_ID", "El identificador de Google Books es obligatorio.");
+    const openLibraryIdValue = Array.isArray(req.params.openLibraryId)
+      ? req.params.openLibraryId[0]
+      : Array.isArray(req.params.googleBooksId)
+        ? req.params.googleBooksId[0]
+        : req.params.openLibraryId ?? req.params.googleBooksId;
+    const openLibraryId = typeof openLibraryIdValue === "string" ? openLibraryIdValue.trim() : "";
+
+    if (!openLibraryId) {
+      throw new AppError(400, "INVALID_OPEN_LIBRARY_ID", "El identificador de Open Library es obligatorio.");
     }
 
-    const book = await googleBooksService.getBookByGoogleId(googleBooksId);
+    const book = await openLibraryService.getBookByOpenLibraryId(openLibraryId);
     res.status(200).json({ success: true, data: book });
   } catch (error) {
     next(error);
